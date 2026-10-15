@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Contrôle local de fichiers clients avant intégration et composition de documents.">
+  <title>Contrôle de fichiers clients</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark" aria-hidden="true">CF</div>
+    <div>
+      <p class="eyebrow">Préparation des fichiers clients</p>
+      <h1>Contrôle de fichier</h1>
+    </div>
+    <span class="local-badge"><span></span> Traitement dans le navigateur</span>
+  </header>
+
+  <main class="layout">
+    <section class="intro">
+      <h2>Repérez les anomalies avant l’import</h2>
+      <p>Chargez un fichier, choisissez les contrôles utiles et obtenez les erreurs avec leur ligne et leur colonne.</p>
+    </section>
+
+    <section class="panel upload-panel" aria-labelledby="upload-title">
+      <div class="section-heading">
+        <span class="step">1</span>
+        <div>
+          <h2 id="upload-title">Choisir un fichier</h2>
+          <p>Formats acceptés : CSV, TXT et XLSX</p>
+        </div>
+      </div>
+
+      <label class="dropzone" id="dropzone" for="fileInput">
+        <span class="upload-icon" aria-hidden="true">↑</span>
+        <strong>Déposez votre fichier ici</strong>
+        <span>ou <u>parcourez vos fichiers</u></span>
+        <small>Le fichier n’est pas envoyé sur un serveur.</small>
+        <input id="fileInput" type="file" accept=".csv,.txt,.xlsx,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      </label>
+
+      <div id="fileInfo" class="file-info hidden"></div>
+      <div id="sheetRow" class="inline-setting hidden">
+        <label for="sheetSelect">Feuille Excel</label>
+        <select id="sheetSelect"></select>
+      </div>
+    </section>
+
+    <section class="panel settings-panel" aria-labelledby="settings-title">
+      <div class="section-heading">
+        <span class="step">2</span>
+        <div>
+          <h2 id="settings-title">Configurer les contrôles</h2>
+          <p>Les colonnes sont détectées depuis la première ligne du fichier.</p>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <fieldset class="checks-fieldset">
+          <legend>Contrôles à lancer</legend>
+
+          <label class="check-row">
+            <input type="checkbox" id="checkPostal" checked>
+            <span><strong>Format des codes postaux</strong><small>Selon le pays sélectionné</small></span>
+          </label>
+
+          <label class="check-row">
+            <input type="checkbox" id="checkRequired" checked>
+            <span><strong>Champs obligatoires</strong><small>Repère les cellules vides</small></span>
+          </label>
+
+          <label class="check-row">
+            <input type="checkbox" id="checkChars" checked>
+            <span><strong>Caractères suspects</strong><small>Contrôle les caractères invisibles ou de remplacement</small></span>
+          </label>
+
+          <label class="check-row">
+            <input type="checkbox" id="checkStructure" checked>
+            <span><strong>Structure CSV / TXT</strong><small>Repère les guillemets mal formés et les lignes incohérentes</small></span>
+          </label>
+        </fieldset>
+
+        <div class="column-settings">
+          <div class="field">
+            <label for="postalColumns">Colonnes de codes postaux</label>
+            <select id="postalColumns" multiple size="5" disabled aria-describedby="postalHelp">
+              <option>Chargez un fichier d’abord</option>
+            </select>
+            <small class="field-hint" id="postalHelp">
+              Les en-têtes comme « CP », « Code postal », « ZIP » et « Postcode » sont présélectionnés.
+              Ajustez la sélection selon le fichier. Ctrl (Windows) ou Cmd (Mac) permet d’en choisir plusieurs.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="country">Pays de référence</label>
+            <select id="country" disabled>
+              <option value="FR">France</option>
+              <option value="BE">Belgique</option>
+              <option value="DE">Allemagne</option>
+              <option value="ES">Espagne</option>
+              <option value="IT">Italie</option>
+              <option value="NL">Pays-Bas</option>
+              <option value="PT">Portugal</option>
+              <option value="CH">Suisse</option>
+              <option value="LU">Luxembourg</option>
+              <option value="US">États-Unis</option>
+              <option value="CA">Canada</option>
+              <option value="GB">Royaume-Uni</option>
+              <option value="IE">Irlande</option>
+              <option value="AU">Australie</option>
+            </select>
+            <small class="field-hint">Cette version contrôle la forme du code, pas son existence dans une base postale.</small>
+          </div>
+
+          <div class="field">
+            <label for="countryColumn">Colonne contenant le pays (facultatif)</label>
+            <select id="countryColumn" disabled>
+              <option value="fixed">Utiliser le pays de référence ci-dessus</option>
+            </select>
+            <small class="field-hint">
+              Si le fichier contient une colonne « Pays », « Country » ou « Country code »,
+              le pays peut être lu pour chaque ligne. Valeurs comme France, FR ou FRA reconnues.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="requiredColumns">Colonnes obligatoires</label>
+            <select id="requiredColumns" multiple size="4" disabled aria-describedby="requiredHelp"></select>
+            <small class="field-hint" id="requiredHelp">Maintenez Ctrl (Windows) ou Cmd (Mac) pour en choisir plusieurs.</small>
+          </div>
+
+          <div class="field csv-only">
+            <label for="delimiter">Séparateur</label>
+            <select id="delimiter" disabled>
+              <option value="auto">Détection automatique</option>
+              <option value=";">Point-virgule (;)</option>
+              <option value=",">Virgule (,)</option>
+              <option value="tab">Tabulation</option>
+              <option value="|">Barre verticale (|)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary-button" id="runButton" disabled>Lancer les contrôles</button>
+        <button class="secondary-button" id="resetButton" disabled>Réinitialiser</button>
+        <span id="statusMessage" role="status"></span>
+      </div>
+    </section>
+
+    <section class="panel results-panel hidden" id="resultsPanel" aria-labelledby="results-title">
+      <div class="section-heading results-heading">
+        <span class="step">3</span>
+        <div>
+          <h2 id="results-title">Résultat du contrôle</h2>
+          <p id="resultSummary"></p>
+        </div>
+        <button id="exportButton" class="secondary-button" disabled>Exporter le rapport CSV</button>
+      </div>
+
+      <div class="summary-cards" id="summaryCards"></div>
+
+      <div id="noErrors" class="success-message hidden">
+        <span aria-hidden="true">✓</span>
+        <div>
+          <strong>Aucune anomalie détectée</strong>
+          <p>Le fichier a passé les contrôles sélectionnés.</p>
+        </div>
+      </div>
+
+      <div class="table-wrap" id="issuesWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ligne</th>
+              <th>Colonne</th>
+              <th>Contrôle</th>
+              <th>Valeur détectée</th>
+              <th>Détail</th>
+            </tr>
+          </thead>
+          <tbody id="issuesBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      Astuce : une valeur comme <code>00123</code> doit être conservée en texte pour ne pas perdre le zéro initial.
+    </footer>
+  </main>
+</body>
+</html>
