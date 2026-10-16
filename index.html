@@ -3,194 +3,149 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Contrôle local de fichiers clients avant intégration et composition de documents.">
-  <title>Contrôle de fichiers clients</title>
+  <meta name="description" content="Vérification des fichiers clients et des codes postaux selon le pays.">
+  <title>Vérification des fichiers clients</title>
   <link rel="stylesheet" href="styles.css">
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand-mark" aria-hidden="true">CF</div>
-    <div>
-      <p class="eyebrow">Préparation des fichiers clients</p>
-      <h1>Contrôle de fichier</h1>
-    </div>
-    <span class="local-badge"><span></span> Traitement dans le navigateur</span>
-  </header>
+  <main class="page">
+    <header class="header">
+      <div class="brand-icon" aria-hidden="true">✓</div>
+      <div>
+        <p class="eyebrow">PRÉPARATION DES FICHIERS CLIENTS</p>
+        <h1>Vérifier un fichier</h1>
+        <p class="intro">Importez un fichier puis vérifiez rapidement les lignes qui nécessitent une correction.</p>
+      </div>
+    </header>
 
-  <main class="layout">
-    <section class="intro">
-      <h2>Repérez les anomalies avant l’import</h2>
-      <p>Chargez un fichier, choisissez les contrôles utiles et obtenez les erreurs avec leur ligne et leur colonne.</p>
-    </section>
-
-    <section class="panel upload-panel" aria-labelledby="upload-title">
+    <section class="panel upload-panel">
       <div class="section-heading">
         <span class="step">1</span>
         <div>
-          <h2 id="upload-title">Choisir un fichier</h2>
-          <p>Formats acceptés : CSV, TXT et XLSX</p>
+          <h2>Importer le fichier</h2>
+          <p>CSV, TXT, TSV ou Excel (.xlsx, .xlsm). Le fichier reste dans votre navigateur.</p>
         </div>
       </div>
 
-      <label class="dropzone" id="dropzone" for="fileInput">
+      <label id="dropZone" class="drop-zone" for="fileInput">
         <span class="upload-icon" aria-hidden="true">↑</span>
-        <strong>Déposez votre fichier ici</strong>
-        <span>ou <u>parcourez vos fichiers</u></span>
-        <small>Le fichier n’est pas envoyé sur un serveur.</small>
-        <input id="fileInput" type="file" accept=".csv,.txt,.xlsx,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <strong>Déposez le fichier ici</strong>
+        <span>ou cliquez pour le sélectionner</span>
+        <input id="fileInput" type="file" accept=".csv,.txt,.tsv,.xlsx,.xlsm">
       </label>
 
-      <div id="fileInfo" class="file-info hidden"></div>
-      <div id="sheetRow" class="inline-setting hidden">
-        <label for="sheetSelect">Feuille Excel</label>
-        <select id="sheetSelect"></select>
+      <div id="fileInfo" class="file-info" aria-live="polite">Aucun fichier sélectionné.</div>
+
+      <div id="sheetPickerWrap" class="field hidden">
+        <label for="sheetPicker">Feuille Excel</label>
+        <select id="sheetPicker"></select>
+      </div>
+
+      <div id="headerRowWrap" class="field hidden">
+        <label for="headerRow">Ligne des en-têtes</label>
+        <select id="headerRow"></select>
       </div>
     </section>
 
-    <section class="panel settings-panel" aria-labelledby="settings-title">
+    <section id="settingsPanel" class="panel hidden">
       <div class="section-heading">
         <span class="step">2</span>
         <div>
-          <h2 id="settings-title">Configurer les contrôles</h2>
-          <p>Les colonnes sont détectées depuis la première ligne du fichier.</p>
+          <h2>Vérifier les colonnes détectées</h2>
+          <p>Les colonnes sont repérées d’après les en-têtes et peuvent être corrigées.</p>
         </div>
       </div>
 
       <div class="settings-grid">
-        <fieldset class="checks-fieldset">
-          <legend>Contrôles à lancer</legend>
-
-          <label class="check-row">
-            <input type="checkbox" id="checkPostal" checked>
-            <span><strong>Format des codes postaux</strong><small>Selon le pays sélectionné</small></span>
-          </label>
-
-          <label class="check-row">
-            <input type="checkbox" id="checkRequired" checked>
-            <span><strong>Champs obligatoires</strong><small>Repère les cellules vides</small></span>
-          </label>
-
-          <label class="check-row">
-            <input type="checkbox" id="checkChars" checked>
-            <span><strong>Caractères suspects</strong><small>Contrôle les caractères invisibles ou de remplacement</small></span>
-          </label>
-
-          <label class="check-row">
-            <input type="checkbox" id="checkStructure" checked>
-            <span><strong>Structure CSV / TXT</strong><small>Repère les guillemets mal formés et les lignes incohérentes</small></span>
-          </label>
-        </fieldset>
-
-        <div class="column-settings">
-          <div class="field">
-            <label for="postalColumns">Colonnes de codes postaux</label>
-            <select id="postalColumns" multiple size="5" disabled aria-describedby="postalHelp">
-              <option>Chargez un fichier d’abord</option>
-            </select>
-            <small class="field-hint" id="postalHelp">
-              Les en-têtes comme « CP », « Code postal », « ZIP » et « Postcode » sont présélectionnés.
-              Ajustez la sélection selon le fichier. Ctrl (Windows) ou Cmd (Mac) permet d’en choisir plusieurs.
-            </small>
-          </div>
-
-          <div class="field">
-            <label for="country">Pays de référence</label>
-            <select id="country" disabled>
-              <option value="FR">France</option>
-              <option value="BE">Belgique</option>
-              <option value="DE">Allemagne</option>
-              <option value="ES">Espagne</option>
-              <option value="IT">Italie</option>
-              <option value="NL">Pays-Bas</option>
-              <option value="PT">Portugal</option>
-              <option value="CH">Suisse</option>
-              <option value="LU">Luxembourg</option>
-              <option value="US">États-Unis</option>
-              <option value="CA">Canada</option>
-              <option value="GB">Royaume-Uni</option>
-              <option value="IE">Irlande</option>
-              <option value="AU">Australie</option>
-            </select>
-            <small class="field-hint">Cette version contrôle la forme du code, pas son existence dans une base postale.</small>
-          </div>
-
-          <div class="field">
-            <label for="countryColumn">Colonne contenant le pays (facultatif)</label>
-            <select id="countryColumn" disabled>
-              <option value="fixed">Utiliser le pays de référence ci-dessus</option>
-            </select>
-            <small class="field-hint">
-              Si le fichier contient une colonne « Pays », « Country » ou « Country code »,
-              le pays peut être lu pour chaque ligne. Valeurs comme France, FR ou FRA reconnues.
-            </small>
-          </div>
-
-          <div class="field">
-            <label for="requiredColumns">Colonnes obligatoires</label>
-            <select id="requiredColumns" multiple size="4" disabled aria-describedby="requiredHelp"></select>
-            <small class="field-hint" id="requiredHelp">Maintenez Ctrl (Windows) ou Cmd (Mac) pour en choisir plusieurs.</small>
-          </div>
-
-          <div class="field csv-only">
-            <label for="delimiter">Séparateur</label>
-            <select id="delimiter" disabled>
-              <option value="auto">Détection automatique</option>
-              <option value=";">Point-virgule (;)</option>
-              <option value=",">Virgule (,)</option>
-              <option value="tab">Tabulation</option>
-              <option value="|">Barre verticale (|)</option>
-            </select>
-          </div>
+        <div class="field">
+          <label for="countryColumn">Colonne du pays</label>
+          <select id="countryColumn"></select>
+          <span class="hint">France, FR et FRA sont reconnus.</span>
         </div>
+
+        <div class="field">
+          <label for="defaultCountry">Pays à appliquer si le pays manque</label>
+          <select id="defaultCountry"></select>
+          <span class="hint">« À déterminer » évite de supposer que le fichier est français.</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label-line">
+          <label>Colonnes de code postal</label>
+          <button id="selectDetected" class="text-button" type="button">Resélectionner les colonnes détectées</button>
+        </div>
+        <div id="postalColumns" class="column-list"></div>
+        <span class="hint">Les colonnes sélectionnées sont contrôlées et mises en évidence dans les résultats.</span>
+      </div>
+
+      <div class="options">
+        <label class="option">
+          <input id="checkSpecial" type="checkbox" checked>
+          <span><strong>Caractères suspects</strong><small>Caractères invisibles, de contrôle ou mal décodés.</small></span>
+        </label>
+
+        <label class="option">
+          <input id="checkStructure" type="checkbox" checked>
+          <span><strong>Structure CSV/TXT</strong><small>Guillemets mal placés et colonnes incohérentes.</small></span>
+        </label>
+
+        <label class="option">
+          <input id="padFrench" type="checkbox">
+          <span><strong>Compléter les CP français courts</strong><small>Ajoute les zéros manquants dans une copie exportée.</small></span>
+        </label>
       </div>
 
       <div class="actions">
-        <button class="primary-button" id="runButton" disabled>Lancer les contrôles</button>
-        <button class="secondary-button" id="resetButton" disabled>Réinitialiser</button>
-        <span id="statusMessage" role="status"></span>
+        <button id="validateButton" class="button primary" type="button">Analyser le fichier</button>
+        <span id="rowCount" class="muted"></span>
       </div>
     </section>
 
-    <section class="panel results-panel hidden" id="resultsPanel" aria-labelledby="results-title">
+    <section id="resultsPanel" class="panel hidden">
       <div class="section-heading results-heading">
         <span class="step">3</span>
         <div>
-          <h2 id="results-title">Résultat du contrôle</h2>
-          <p id="resultSummary"></p>
+          <h2>Résultats</h2>
+          <p id="resultSubtitle"></p>
         </div>
-        <button id="exportButton" class="secondary-button" disabled>Exporter le rapport CSV</button>
+        <button id="exportClean" class="button secondary hidden" type="button">Exporter le fichier corrigé</button>
+        <button id="exportErrors" class="button secondary" type="button">Exporter les erreurs CSV</button>
       </div>
 
-      <div class="summary-cards" id="summaryCards"></div>
+      <div id="stats" class="stats"></div>
+      <div id="noErrors" class="success hidden">Aucune anomalie détectée.</div>
 
-      <div id="noErrors" class="success-message hidden">
-        <span aria-hidden="true">✓</span>
-        <div>
-          <strong>Aucune anomalie détectée</strong>
-          <p>Le fichier a passé les contrôles sélectionnés.</p>
-        </div>
+      <div id="errorTools" class="error-tools hidden">
+        <input id="errorSearch" type="search" placeholder="Rechercher une ligne, une valeur ou une colonne">
+        <select id="errorFilter" aria-label="Filtrer les erreurs">
+          <option value="all">Toutes les anomalies</option>
+          <option value="postal">Codes postaux</option>
+          <option value="country">Pays à vérifier</option>
+          <option value="characters">Caractères et guillemets</option>
+          <option value="structure">Structure du fichier</option>
+        </select>
+        <span id="shownCount" class="muted"></span>
       </div>
 
-      <div class="table-wrap" id="issuesWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Ligne</th>
-              <th>Colonne</th>
-              <th>Contrôle</th>
-              <th>Valeur détectée</th>
-              <th>Détail</th>
-            </tr>
-          </thead>
-          <tbody id="issuesBody"></tbody>
-        </table>
+      <div id="errorTableWrap" class="error-list hidden"></div>
+
+      <div id="pagination" class="pagination hidden">
+        <button id="previousPage" class="button secondary" type="button">← Précédent</button>
+        <span id="pageInfo" class="muted"></span>
+        <button id="nextPage" class="button secondary" type="button">Suivant →</button>
       </div>
+
+      <details class="preview">
+        <summary>Aperçu des premières lignes</summary>
+        <div id="dataPreview" class="table-wrap"></div>
+      </details>
     </section>
 
     <footer>
-      Astuce : une valeur comme <code>00123</code> doit être conservée en texte pour ne pas perdre le zéro initial.
+      Les fichiers sont analysés dans le navigateur. La lecture Excel nécessite une connexion Internet pour charger le lecteur XLSX.
     </footer>
   </main>
 </body>
