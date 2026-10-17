@@ -1,152 +1,46 @@
 <!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Vérification des fichiers clients et des codes postaux selon le pays.">
-  <title>Vérification des fichiers clients</title>
-  <link rel="stylesheet" href="styles.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script defer src="app.js"></script>
-</head>
-<body>
-  <main class="page">
-    <header class="header">
-      <div class="brand-icon" aria-hidden="true">✓</div>
-      <div>
-        <p class="eyebrow">PRÉPARATION DES FICHIERS CLIENTS</p>
-        <h1>Vérifier un fichier</h1>
-        <p class="intro">Importez un fichier puis vérifiez rapidement les lignes qui nécessitent une correction.</p>
-      </div>
-    </header>
-
-    <section class="panel upload-panel">
-      <div class="section-heading">
-        <span class="step">1</span>
-        <div>
-          <h2>Importer le fichier</h2>
-          <p>CSV, TXT, TSV ou Excel (.xlsx, .xlsm). Le fichier reste dans votre navigateur.</p>
-        </div>
-      </div>
-
-      <label id="dropZone" class="drop-zone" for="fileInput">
-        <span class="upload-icon" aria-hidden="true">↑</span>
-        <strong>Déposez le fichier ici</strong>
-        <span>ou cliquez pour le sélectionner</span>
-        <input id="fileInput" type="file" accept=".csv,.txt,.tsv,.xlsx,.xlsm">
-      </label>
-
-      <div id="fileInfo" class="file-info" aria-live="polite">Aucun fichier sélectionné.</div>
-
-      <div id="sheetPickerWrap" class="field hidden">
-        <label for="sheetPicker">Feuille Excel</label>
-        <select id="sheetPicker"></select>
-      </div>
-
-      <div id="headerRowWrap" class="field hidden">
-        <label for="headerRow">Ligne des en-têtes</label>
-        <select id="headerRow"></select>
-      </div>
-    </section>
-
-    <section id="settingsPanel" class="panel hidden">
-      <div class="section-heading">
-        <span class="step">2</span>
-        <div>
-          <h2>Vérifier les colonnes détectées</h2>
-          <p>Les colonnes sont repérées d’après les en-têtes et peuvent être corrigées.</p>
-        </div>
-      </div>
-
-      <div class="settings-grid">
-        <div class="field">
-          <label for="countryColumn">Colonne du pays</label>
-          <select id="countryColumn"></select>
-          <span class="hint">France, FR et FRA sont reconnus.</span>
-        </div>
-
-        <div class="field">
-          <label for="defaultCountry">Pays à appliquer si le pays manque</label>
-          <select id="defaultCountry"></select>
-          <span class="hint">« À déterminer » évite de supposer que le fichier est français.</span>
-        </div>
-      </div>
-
-      <div class="field">
-        <div class="label-line">
-          <label>Colonnes de code postal</label>
-          <button id="selectDetected" class="text-button" type="button">Resélectionner les colonnes détectées</button>
-        </div>
-        <div id="postalColumns" class="column-list"></div>
-        <span class="hint">Les colonnes sélectionnées sont contrôlées et mises en évidence dans les résultats.</span>
-      </div>
-
-      <div class="options">
-        <label class="option">
-          <input id="checkSpecial" type="checkbox" checked>
-          <span><strong>Caractères suspects</strong><small>Caractères invisibles, de contrôle ou mal décodés.</small></span>
-        </label>
-
-        <label class="option">
-          <input id="checkStructure" type="checkbox" checked>
-          <span><strong>Structure CSV/TXT</strong><small>Guillemets mal placés et colonnes incohérentes.</small></span>
-        </label>
-
-        <label class="option">
-          <input id="padFrench" type="checkbox">
-          <span><strong>Compléter les CP français courts</strong><small>Ajoute les zéros manquants dans une copie exportée.</small></span>
-        </label>
-      </div>
-
-      <div class="actions">
-        <button id="validateButton" class="button primary" type="button">Analyser le fichier</button>
-        <span id="rowCount" class="muted"></span>
-      </div>
-    </section>
-
-    <section id="resultsPanel" class="panel hidden">
-      <div class="section-heading results-heading">
-        <span class="step">3</span>
-        <div>
-          <h2>Résultats</h2>
-          <p id="resultSubtitle"></p>
-        </div>
-        <button id="exportClean" class="button secondary hidden" type="button">Exporter le fichier corrigé</button>
-        <button id="exportErrors" class="button secondary" type="button">Exporter les erreurs CSV</button>
-      </div>
-
-      <div id="stats" class="stats"></div>
-      <div id="noErrors" class="success hidden">Aucune anomalie détectée.</div>
-
-      <div id="errorTools" class="error-tools hidden">
-        <input id="errorSearch" type="search" placeholder="Rechercher une ligne, une valeur ou une colonne">
-        <select id="errorFilter" aria-label="Filtrer les erreurs">
-          <option value="all">Toutes les anomalies</option>
-          <option value="postal">Codes postaux</option>
-          <option value="country">Pays à vérifier</option>
-          <option value="characters">Caractères et guillemets</option>
-          <option value="structure">Structure du fichier</option>
-        </select>
-        <span id="shownCount" class="muted"></span>
-      </div>
-
-      <div id="errorTableWrap" class="error-list hidden"></div>
-
-      <div id="pagination" class="pagination hidden">
-        <button id="previousPage" class="button secondary" type="button">← Précédent</button>
-        <span id="pageInfo" class="muted"></span>
-        <button id="nextPage" class="button secondary" type="button">Suivant →</button>
-      </div>
-
-      <details class="preview">
-        <summary>Aperçu des premières lignes</summary>
-        <div id="dataPreview" class="table-wrap"></div>
-      </details>
-    </section>
-
-    <footer>
-      Les fichiers sont analysés dans le navigateur. La lecture Excel nécessite une connexion Internet pour charger le lecteur XLSX.
-    </footer>
-  </main>
-</body>
-</html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Contrôle local des fichiers clients avant intégration."><title>Contrôle des fichiers clients</title>
+<link rel="stylesheet" href="styles/base.css"><link rel="stylesheet" href="styles/layout.css"><link rel="stylesheet" href="styles/components.css">
+<!-- Excel uniquement : bibliothèque SheetJS chargée depuis le CDN autorisé. Aucun fichier client n’est envoyé au CDN. -->
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script defer src="scripts/config.js"></script><script defer src="scripts/state.js"></script><script defer src="scripts/parser.js"></script><script defer src="scripts/analyze.js"></script><script defer src="scripts/exports.js"></script><script defer src="scripts/render.js"></script><script defer src="scripts/app.js"></script></head>
+<body><header class="topbar"><a class="brand" href="#import"><span class="brand-mark">✓</span><span>Contrôle fichiers clients</span></a><div class="privacy"><span class="privacy-dot"></span>Traitement local · aucune sauvegarde des fichiers</div><button class="btn subtle" id="clearSession" type="button">Effacer la session</button></header>
+<div class="shell"><aside class="sidebar"><nav id="mainNav" aria-label="Fonctionnalités"><a href="#import" data-view="import"><span>01</span>Import & colonnes</a><a href="#postal" data-view="postal"><span>02</span>Codes postaux</a><a href="#structure" data-view="structure"><span>03</span>Structure & caractères</a><a href="#harmonisation" data-view="harmonisation"><span>04</span>Harmonisation</a><a href="#doublons" data-view="doublons"><span>05</span>Doublons</a><a href="#geographie" data-view="geographie"><span>06</span>Zones & filtres</a><a href="#export" data-view="export"><span>07</span>Exports & journal</a></nav><div class="side-note">Tout le contrôle se fait dans cette page. Les fichiers restent en mémoire vive jusqu’à l’effacement ou la fermeture de l’onglet.</div></aside><main class="main"><div class="session-strip" id="sessionStrip">Aucun fichier chargé · CSV/TXT/TSV hors ligne; Excel nécessite Internet</div><section id="viewRoot" aria-live="polite"></section></main></div><div id="toast" class="toast" role="status" aria-live="polite"></div>
+<template id="tpl-doublons">
+<div class="view-head"><div><h1>Doublons probables</h1><p>Repérez des enregistrements proches avec le même code postal. Aucun doublon n’est supprimé automatiquement.</p></div><button class="btn primary" data-action="duplicates">Analyser les doublons</button></div>
+<section class="panel"><div class="row"><label class="inline-check"><input id="dupeEnabled" type="checkbox"> Activer la recherche de doublons</label><label class="field" style="min-width:220px"><span class="label">Seuil de ressemblance <b id="dupeThresholdLabel">90 %</b></span><input id="dupeThreshold" type="range" min="70" max="100" value="90"></label><label class="inline-check"><input id="dupeExclude" type="checkbox"> Exclure les doublons de l’export principal</label></div><p class="notice warn">L’exclusion envoie les lignes signalées dans le reliquat, mais uniquement si vous l’activez explicitement. Vérifiez les groupes avant export.</p><div id="duplicateStats" class="stats"></div><div id="duplicateResults"></div></section>
+</template>
+<template id="tpl-export">
+<div class="view-head"><div><h1>Exports et journal</h1><p>Produisez les fichiers de retour client et les copies préparées pour intégration.</p></div></div>
+<section class="panel"><h2>Format de sortie</h2><div class="row"><label class="inline-check"><input type="radio" name="outFormat" value="csv" checked> CSV</label><label class="inline-check"><input type="radio" name="outFormat" value="xlsx"> Excel (.xlsx)</label></div><p class="hint">Les rapports volumineux CSV peuvent s’ouvrir plus rapidement. Excel est disponible si le lecteur local est chargé.</p></section>
+<section class="panel"><h2>Fichiers à produire</h2><div class="export-grid"><div class="export-card"><h3>Rapport d’anomalies</h3><p>Une anomalie par ligne de rapport, avec fichier, ligne, colonne, valeur et explication.</p><button class="btn secondary" data-action="export-errors">Exporter les erreurs</button></div><div class="export-card"><h3>Copie préparée</h3><p>Fichier source ou tableau standard harmonisé, selon le mapping disponible.</p><button class="btn secondary" data-action="export-clean">Exporter le fichier préparé</button></div><div class="export-card"><h3>Reliquat</h3><p>Lignes exclues par filtre de zone ou doublons explicitement écartés.</p><button class="btn secondary" data-action="export-rejects">Exporter le reliquat</button></div><div class="export-card"><h3>Journal de traitement</h3><p>Résumé des volumes, règles et exclusions, sans conserver le fichier après fermeture.</p><button class="btn secondary" data-action="export-log">Télécharger le journal</button></div></div></section>
+<section class="panel"><h2>Profil de réglages</h2><p class="panel-intro">Un profil ne contient que les choix de colonnes, règles et transformations, jamais les données importées.</p><div class="row"><button class="btn secondary" data-action="profile-export">Exporter le profil JSON</button><label class="btn secondary" for="profileInput">Importer un profil<input id="profileInput" type="file" accept=".json,application/json" hidden></label><button class="btn danger" data-action="clear-session">Effacer toutes les données en mémoire</button></div></section>
+<section class="panel"><h2>Résumé</h2><div id="exportStats" class="stats"></div><div id="journal"></div></section>
+</template>
+<template id="tpl-geographie">
+<div class="view-head"><div><h1>Zones et filtres géographiques</h1><p>Catégorisation France métropolitaine, DROM, COM, étranger ou pays indéterminé.</p></div></div>
+<section class="panel"><h2>Inclure dans le fichier préparé</h2><p class="panel-intro">Les lignes exclues sont ajoutées au reliquat avec un motif. Toutes les catégories sont incluses par défaut.</p><div class="check-grid"><label class="check-tile"><input type="checkbox" data-zone="METROPOLE" checked><span><strong>France métropolitaine</strong></span></label><label class="check-tile"><input type="checkbox" data-zone="DROM" checked><span><strong>DROM (97x)</strong></span></label><label class="check-tile"><input type="checkbox" data-zone="COM" checked><span><strong>COM (98x)</strong></span></label><label class="check-tile"><input type="checkbox" data-zone="ETRANGER" checked><span><strong>Étranger</strong></span></label><label class="check-tile"><input type="checkbox" data-zone="INCONNU" checked><span><strong>Pays ou zone inconnus</strong></span></label></div><div id="geoStats" class="stats"></div><div id="geoResults"></div></section>
+</template>
+<template id="tpl-harmonisation">
+<div class="view-head"><div><h1>Harmonisation et mapping</h1><p>Préparez une copie d’export sans modifier les données source. Les options sont facultatives.</p></div></div>
+<section class="panel"><h2>Associer les champs du fichier</h2><p class="panel-intro">Les colonnes détectées restent spécifiques à chaque fichier. Ce mapping sert aux exports consolidés et aux doublons, pas au déclenchement des contrôles.</p><div id="harmonizeMapping" class="empty">Importez des fichiers pour associer les champs.</div></section>
+<section class="panel"><h2>Transformations à appliquer à la copie exportée</h2><p class="panel-intro">Désactivées par défaut. Chaque transformation sera inscrite dans le journal de traitement.</p><div class="check-grid"><label class="check-tile"><input type="checkbox" data-transform="postalPad"><span><strong>Compléter les zéros à gauche (France)</strong><small>Ex. 7501 → 07501. Vérifiez avant d’envoyer au logiciel.</small></span></label><label class="check-tile"><input type="checkbox" data-transform="countryISO"><span><strong>Convertir le pays en code ISO</strong><small>France → FR lorsque le pays est reconnu.</small></span></label><label class="check-tile"><input type="checkbox" data-transform="removeFrance"><span><strong>Vider le pays pour les adresses françaises</strong><small>Pour les formats internes sans ligne pays domestique.</small></span></label><label class="check-tile"><input type="checkbox" data-transform="uppercase"><span><strong>Majuscules sur les champs d’adresse</strong><small>Destinataire, adresse et ville associés ci-dessus.</small></span></label><label class="check-tile"><input type="checkbox" data-transform="removeAccents"><span><strong>Retirer les accents des villes</strong><small>Agit uniquement sur la copie exportée.</small></span></label><label class="check-tile"><input type="checkbox" data-transform="street"><span><strong>Abréger les types de voie</strong><small>RUE, AVENUE, BOULEVARD, IMPASSE…</small></span></label><label class="check-tile"><input type="checkbox" data-transform="region"><span><strong>Harmoniser quelques régions courantes</strong><small>À contrôler avec le dictionnaire métier avant usage.</small></span></label></div><details style="margin-top:12px"><summary>Dictionnaire d’abréviations modifiable</summary><p class="hint">Ajouter une règle « forme rencontrée → forme de sortie ». Les règles personnalisées restent uniquement dans la session; exportez le profil JSON pour les conserver séparément.</p><div class="row"><input class="control-input" id="dictFrom" placeholder="Ex. AVENUE"><input class="control-input" id="dictTo" placeholder="Ex. AV"><button class="btn secondary" data-action="dict-add">Ajouter</button></div><div id="dictionaryList"></div></details></section>
+</template>
+<template id="tpl-import">
+<div class="view-head"><div><h1>Importer et repérer les colonnes</h1><p>Chargez un ou plusieurs fichiers. Les colonnes pays et code postal sont proposées automatiquement par leurs en-têtes.</p></div></div>
+<section class="panel"><h2>Fichiers clients</h2><p class="panel-intro">CSV, TXT, TSV, XLSX et XLSM. Importation et analyse dans votre navigateur.</p><label id="dropzone" class="dropzone" for="fileInput"><strong>Déposer les fichiers ici</strong><span>ou cliquer pour les sélectionner</span><small>Les classeurs Excel peuvent contenir plusieurs onglets.</small><input id="fileInput" type="file" multiple accept=".csv,.txt,.tsv,.xlsx,.xlsm"></label><div class="row spread" style="margin-top:12px"><div id="fileSummary" class="muted">Aucun fichier chargé</div><button class="btn secondary" data-action="clear-files">Retirer tous les fichiers</button></div></section>
+<section class="panel"><div class="row spread"><div><h2>Colonnes détectées</h2><p class="panel-intro">Chaque colonne probable est contrôlée automatiquement. Les choix ci-dessous vous aident à confirmer les champs.</p></div></div><div id="sourceMappings" class="empty">Importez un fichier pour afficher ses colonnes.</div></section>
+<section class="panel"><h2>Règles appliquées</h2><div class="check-grid"><label class="check-tile"><input type="checkbox" checked disabled><span><strong>Codes postaux selon le pays</strong><small>France, FR et FRA sont reconnus. Pays manquant/inconnu classé à vérifier.</small></span></label><label class="check-tile"><input type="checkbox" id="optCharacters" checked><span><strong>Caractères invisibles et de contrôle</strong><small>Indique colonne, caractère Unicode et position dans la cellule.</small></span></label><label class="check-tile"><input type="checkbox" id="optStructure" checked><span><strong>Structure CSV/TXT</strong><small>Guillemets, séparateurs inattendus et largeur de ligne.</small></span></label><label class="check-tile"><input type="checkbox" id="optDuplicates"><span><strong>Doublons probables</strong><small>Recherche activée aussi dans la page Doublons.</small></span></label></div><div class="analysis-action"><button class="btn primary" data-action="analyze">Analyser le fichier</button><span class="hint">Les résultats apparaîtront juste en dessous.</span></div></section>
+<section class="panel"><div class="row spread"><div><h2>Résultats de l’analyse</h2><p class="panel-intro">Chaque anomalie indique le fichier, la ligne, la colonne et la valeur. Ouvrez « Afficher la ligne complète » pour contrôler toute la ligne.</p></div></div><div id="analysisStats" class="stats"></div><div class="filters"><select id="analysisFilter"><option value="all">Toutes les anomalies</option><option>Code postal invalide</option><option>Code postal manquant</option><option>Pays non reconnu</option><option>Pays indéterminé</option><option>Règle indisponible</option><option>Guillemet mal placé</option><option>Nombre de colonnes</option><option>Caractère suspect</option><option>En-tête dupliqué</option><option>Structure CSV/TXT</option><option>Doublon probable</option></select><input id="analysisSearch" type="search" placeholder="Rechercher une ligne, colonne, valeur"><span id="analysisCount" class="muted"></span></div><div id="analysisResults"></div><div class="pager"><button class="btn secondary" data-action="analysis-prev">← Précédent</button><span id="analysisPage" class="muted"></span><button class="btn secondary" data-action="analysis-next">Suivant →</button></div></section>
+</template>
+<template id="tpl-postal">
+<div class="view-head"><div><h1>Codes postaux</h1><p>Contrôle du format attendu par pays, ligne par ligne, sans inventer de pays quand la donnée manque.</p></div><div class="head-actions"><button class="btn primary" data-action="analyze">Lancer / actualiser l’analyse</button></div></div>
+<section class="panel"><div id="postalStats" class="stats"></div><div class="filters"><select id="postalFilter"><option value="all">Toutes les erreurs</option><option value="Code postal invalide">Code postal invalide</option><option value="Code postal manquant">Code postal manquant</option><option value="Pays non reconnu">Pays non reconnu</option><option value="Pays indéterminé">Pays indéterminé</option><option value="Règle indisponible">Règle indisponible</option></select><select id="postalSource"><option value="all">Tous les fichiers</option></select><input id="postalSearch" type="search" placeholder="Rechercher ligne, valeur, colonne"><span id="postalCount" class="muted"></span></div><div id="postalResults"></div><div class="pager"><button class="btn secondary" data-action="postal-prev">← Précédent</button><span id="postalPage" class="muted"></span><button class="btn secondary" data-action="postal-next">Suivant →</button></div></section>
+<section class="panel"><h2>Règles et prudence</h2><p class="panel-intro">Une forme conforme ne garantit pas que l’adresse existe. Les règles vérifient le format usuel du pays. Le code postal reste du texte pour préserver les zéros initiaux.</p><div id="postalRules" class="notice"></div></section>
+</template>
+<template id="tpl-structure">
+<div class="view-head"><div><h1>Structure et caractères</h1><p>Retrouvez l’emplacement précis des guillemets, séparateurs et caractères suspects qui peuvent perturber l’intégration.</p></div><button class="btn primary" data-action="analyze">Lancer / actualiser l’analyse</button></div>
+<section class="panel"><div id="structureStats" class="stats"></div><div class="filters"><select id="structureFilter"><option value="all">Toutes les anomalies</option><option value="Guillemet mal placé">Guillemets</option><option value="Nombre de colonnes">Nombre de colonnes</option><option value="Caractère suspect">Caractères suspects</option><option value="En-tête dupliqué">En-têtes dupliqués</option><option value="Structure CSV/TXT">Autres erreurs CSV/TXT</option></select><input id="structureSearch" type="search" placeholder="Rechercher ligne, colonne, contenu"><span id="structureCount" class="muted"></span></div><div id="structureResults"></div><div class="pager"><button class="btn secondary" data-action="structure-prev">← Précédent</button><span id="structurePage" class="muted"></span><button class="btn secondary" data-action="structure-next">Suivant →</button></div></section>
+<section class="panel"><h2>Repères d’emplacement</h2><p class="panel-intro">Pour CSV/TXT : numéro de ligne physique, cellule, caractère et position en cellule/fichier quand elle peut être calculée. Les points-virgules et guillemets correctement échappés dans un champ entre guillemets ne sont pas considérés comme erreurs.</p><div class="notice">Un fichier texte mal formé est récupéré ligne par ligne après une citation non fermée afin que les lignes suivantes restent inspectables.</div></section>
+</template>
+</body></html>
