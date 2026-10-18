@@ -12,7 +12,35 @@ function errorGroups(errors){const map=new Map();for(const e of errors){const k=
 function fullRow(group){const source=state.sources.find(s=>s.id===group.sourceId);if(!source)return '';const idx=source.dataLines.findIndex(line=>String(line)===String(group.line));if(idx<0)return '';const row=source.rows[idx],problemCols=new Set(group.issues.map(e=>e.columnIndex).filter(x=>x!=null));return `<details><summary>Afficher la ligne complète (${row.length} cellules)</summary><div class="table-scroll"><table class="data-table"><thead><tr><th>Colonne</th><th>Valeur exacte</th></tr></thead><tbody>${Array.from({length:Math.max(source.headers.length,row.length)},(_,i)=>`<tr><td>${esc(source.headers[i]||`Colonne ${i+1}`)}</td><td class="mono ${problemCols.has(i)?'callout-number':''}">${esc(displayChars(row[i]))}</td></tr>`).join('')}</tbody></table></div></details>`}
 function displayChars(s){return String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\uFFFD\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g,c=>({ '\u0000':'⟦NUL⟧','\u0009':'⟦TAB⟧','\u000A':'⟦LF⟧','\u000D':'⟦CR⟧','\u007F':'⟦DEL⟧','\uFFFD':'⟦U+FFFD⟧','\u200B':'⟦U+200B⟧','\uFEFF':'⟦BOM⟧'}[c]||`⟦U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4,'0')}⟧`))}
 function renderGrouped(targetId,errors,pageStateKey){const groups=errorGroups(errors),page=Math.min(state.page[pageStateKey]||1,Math.max(1,Math.ceil(groups.length/PAGE_SIZE))),pages=Math.max(1,Math.ceil(groups.length/PAGE_SIZE));state.page[pageStateKey]=page;const slice=groups.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);const root=document.getElementById(targetId);if(!groups.length){root.innerHTML='<div class="empty">Aucune anomalie correspondant aux filtres.</div>';return{count:0,pages}}root.innerHTML=slice.map(g=>`<article class="issue-card"><header><strong>${esc(g.source)}${g.sheet!=='Données'?` · ${esc(g.sheet)}`:''} — ligne ${g.line}</strong><span class="pill bad">${g.issues.length} anomalie(s)</span></header><ul>${g.issues.map(e=>`<li><strong>${esc(e.type)}</strong> · ${esc(e.column)}${e.columnIndex!==null?` (col. ${e.columnIndex+1})`:''}${e.value?` · valeur <code>${esc(displayChars(e.value))}</code>`:''}<small>${esc(e.detail)}</small></li>`).join('')}</ul>${fullRow(g)}</article>`).join('');return{count:groups.length,pages}}
-function renderAnalysis(){const root=document.getElementById('analysisResults');if(!root)return;const totalRows=state.sources.reduce((sum,source)=>sum+source.rows.length,0),lineCount=new Set(state.errors.map(issue=>`${issue.sourceId}:${issue.rowLine??issue.line}`)).size;document.getElementById('analysisStats').innerHTML=stat('Lignes analysées',totalRows)+stat('Anomalies détectées',state.errors.length,'error')+stat('Lignes à vérifier',lineCount,'error');if(!state.analyzed){root.innerHTML='<div class="empty">Importez un fichier, vérifiez les colonnes et lancez l’analyse.</div>';document.getElementById('analysisCount').textContent='';document.getElementById('analysisPage').textContent='';return}const errors=filteredErrors(null,'analysisFilter','analysisSearch',null),{count,pages}=renderGrouped('analysisResults',errors,'analysis'),label=count===1?'ligne':'lignes';document.getElementById('analysisCount').textContent=`${count.toLocaleString('fr-FR')} ${label} avec anomalie`;document.getElementById('analysisPage').textContent=`Page ${Math.min(state.page.analysis||1,pages)} / ${pages}`}
+function renderAnalysis(){
+ const root=document.getElementById('analysisResults');
+ if(!root)return;
+ const decision=document.getElementById('analysisDecision');
+ const totalRows=state.sources.reduce((sum,source)=>sum+source.rows.length,0);
+ const lineCount=new Set(state.errors.map(issue=>`${issue.sourceId}:${issue.rowLine??issue.line}`)).size;
+ document.getElementById('analysisStats').innerHTML=stat('Lignes analysées',totalRows)+stat('Anomalies détectées',state.errors.length,'error')+stat('Lignes à vérifier',lineCount,'error');
+ if(!state.analyzed){
+  decision.className='decision pending';
+  decision.textContent='En attente de l’analyse du fichier.';
+  root.innerHTML='<div class="empty">Importez un fichier, puis son analyse démarre automatiquement.</div>';
+  document.getElementById('analysisCount').textContent='';
+  document.getElementById('analysisPage').textContent='';
+  return;
+ }
+ if(state.errors.length===0){
+  decision.className='decision good';
+  decision.textContent='Aucune anomalie détectée par les contrôles automatiques. Le fichier peut poursuivre le processus de vérification.';
+ }else{
+  const word=state.errors.length===1?'anomalie détectée':'anomalies détectées';
+  decision.className='decision alert';
+  decision.textContent=`${state.errors.length.toLocaleString('fr-FR')} ${word}. Vérifiez les lignes ci-dessous, puis corrigez le fichier ou renvoyez-le au client avant intégration.`;
+ }
+ const errors=filteredErrors(null,'analysisFilter','analysisSearch',null);
+ const {count,pages}=renderGrouped('analysisResults',errors,'analysis');
+ const label=count===1?'ligne':'lignes';
+ document.getElementById('analysisCount').textContent=`${count.toLocaleString('fr-FR')} ${label} avec anomalie`;
+ document.getElementById('analysisPage').textContent=`Page ${Math.min(state.page.analysis||1,pages)} / ${pages}`;
+}
 function setSourceOptions(id){const select=document.getElementById(id);if(!select)return;const value=select.value;select.innerHTML='<option value="all">Tous les fichiers</option>'+[...new Set(state.sources.map(s=>s.name))].map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');select.value=value||'all'}
 function stat(label,value,cls=''){return `<div class="stat ${cls}"><strong>${Number(value).toLocaleString('fr-FR')}</strong><span>${esc(label)}</span></div>`}
 function renderPostal(){const types=['Code postal invalide','Code postal manquant','Pays non reconnu','Pays indéterminé','Règle indisponible'];const list=state.errors.filter(e=>types.includes(e.type));document.getElementById('postalStats').innerHTML=stat('Anomalies code postal / pays',list.length,'error')+stat('Lignes analysées',state.sources.reduce((a,s)=>a+s.rows.length,0))+stat('Fichiers / onglets',state.sources.length);setSourceOptions('postalSource');const errors=filteredErrors(types,'postalFilter','postalSearch','postalSource');const {count,pages}=renderGrouped('postalResults',errors,'postal');document.getElementById('postalCount').textContent=`${count.toLocaleString('fr-FR')} lignes avec anomalie`;document.getElementById('postalPage').textContent=`Page ${Math.min(state.page.postal,pages)} / ${pages}`;document.getElementById('postalRules').textContent=`Formats usuels configurés pour ${Object.keys(POSTAL).length} pays. Une règle de forme ne confirme pas l’existence réelle d’une adresse.`}

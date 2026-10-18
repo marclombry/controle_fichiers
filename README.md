@@ -15,7 +15,7 @@ Aucun contenu de fichier n’est envoyé à un serveur et aucune donnée n’est
 
 ## Fonctions
 
-1. Import multi-fichiers, onglets Excel, détection d’en-têtes, colonnes pays et codes postaux.
+1. Import multi-fichiers, onglets Excel, détection d’en-têtes, colonnes pays et codes postaux. L’analyse automatique démarre dès l’import : le nombre d’anomalies et un verdict de vérification sont affichés sans étape de réglage préalable.
 2. Contrôle du code postal selon le pays (France, FR et FRA reconnus; plus de 50 formats courants). Les codes vides, trop courts, trop longs ou contenant des caractères non conformes sont remontés. Pays manquant/inconnu signalé sans déclarer arbitrairement le CP invalide.
 3. Détection des guillemets mal placés ou non fermés, séparateurs / colonnes incohérents, en-têtes dupliqués et caractères invisibles/contrôle avec position dans la cellule.
 4. Mapping vers le schéma de consolidation, transformations optionnelles sur la copie exportée, dictionnaire de voies.

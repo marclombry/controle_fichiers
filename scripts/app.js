@@ -6,7 +6,34 @@ function updateSession(){const rows=state.sources.reduce((n,s)=>n+s.rows.length,
 function navigate(view){if(!pageFiles[view])view='import';state.view=view;const tpl=$(`tpl-${view}`);$('viewRoot').innerHTML=tpl?tpl.innerHTML:'<section class="panel"><p>Vue indisponible.</p></section>';renderView(view);updateSession();window.scrollTo(0,0)}
 function invalidateAnalysis(){state.analyzed=false;state.errors=[];updateSession()}
 function setMapping(control){const source=state.sources.find(s=>s.id===control.dataset.source);if(!source)return;const index=Number(control.value);if(control.dataset.map==='country')source.map.country=index;else if(control.dataset.map==='defaultCountry')source.map.defaultCountry=control.value;invalidateAnalysis()}
-async function loadFiles(files){if(!files?.length)return;toast(`Lecture de ${files.length} fichier(s)…`);await new Promise(resolve=>setTimeout(resolve,30));let loaded=0;for(const file of files){try{const parsed=await readFile(file);for(const source of parsed){initializeSource(source);state.sources.push(source);loaded++}state.journal.push(`${new Date().toLocaleString('fr-FR')} — Importé : ${file.name} (${parsed.length} onglet(s)).`)}catch(error){toast(`${file.name} : ${error.message}`)}}const input=$('fileInput');if(input)input.value='';state.analyzed=false;updateSession();await navigate('import');toast(loaded?`${loaded} fichier(s)/onglet(s) chargé(s) en mémoire.`:'Aucun fichier lisible.')}
+async function loadFiles(files){
+ if(!files?.length)return;
+ toast(`Lecture de ${files.length} fichier(s)…`);
+ await new Promise(resolve=>setTimeout(resolve,30));
+ let loaded=0;
+ for(const file of files){
+  try{
+   const parsed=await readFile(file);
+   for(const source of parsed){initializeSource(source);state.sources.push(source);loaded++}
+   state.journal.push(`${new Date().toLocaleString('fr-FR')} — Importé : ${file.name} (${parsed.length} onglet(s)).`)
+  }catch(error){console.error(error);toast(`${file.name} : ${error.message}`)}
+ }
+ const input=$('fileInput');
+ if(input)input.value='';
+ if(loaded){
+  state.page.analysis=1;
+  const result=analyze();
+  updateSession();
+  await navigate('import');
+  const anomalyWord=result.errors===1?'anomalie détectée':'anomalies détectées';
+  toast(`${loaded} fichier(s)/onglet(s) analysé(s) automatiquement · ${result.errors.toLocaleString('fr-FR')} ${anomalyWord}.`);
+  return;
+ }
+ state.analyzed=false;
+ updateSession();
+ await navigate('import');
+ toast('Aucun fichier lisible. Vérifiez son format et son encodage.');
+}
 function runAnalysis(){if(!state.sources.length){toast('Importez un fichier avant l’analyse.');return}const btn=document.querySelector('[data-action="analyze"]');if(btn){btn.disabled=true;btn.textContent='Analyse en cours…'}setTimeout(()=>{try{const result=analyze();updateSession();renderView(state.view);toast(`${result.read.toLocaleString('fr-FR')} lignes vérifiées · ${result.errors.toLocaleString('fr-FR')} anomalies.`)}catch(error){console.error(error);toast(`Erreur d’analyse : ${error.message}`)}finally{if(btn){btn.disabled=false;btn.textContent='Analyser le fichier'} }},25)}
 function removeSource(id){const index=state.sources.findIndex(s=>s.id===id);if(index>=0){const [s]=state.sources.splice(index,1);state.errors=state.errors.filter(e=>e.source!==s.name||e.sheet!==s.sheet);state.analyzed=false;state.journal.push(`${new Date().toLocaleString('fr-FR')} — Retiré : ${s.name} / ${s.sheet}.`);navigate(state.view);updateSession()}}
 function clearAll(){clearState();const input=$('fileInput');if(input)input.value='';location.hash='import';navigate('import');updateSession();toast('Données importées et résultats effacés de la mémoire de cette page.')}
